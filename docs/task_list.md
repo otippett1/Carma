@@ -1,4 +1,4 @@
-# Task List – Carma Prototype 1
+# Task List – Carma
 
 Each task is based on the Analyst’s user stories and includes a clear completion definition.
 
