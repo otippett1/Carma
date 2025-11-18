@@ -1,4 +1,4 @@
-Workspace Rules – Carma
+# Workspace Rules – Carma
 Naming Conventions
 
 Folders/Files: Use lowercase and hyphens (e.g., /client/components/navbar.jsx).
