@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 Workspace Rules – Carma
+=======
+# Workspace Rules – Carma
+>>>>>>> af144faa4b25b404699770428b5c18e75f6838c6
 Naming Conventions
 
 Folders/Files: Use lowercase and hyphens (e.g., /client/components/navbar.jsx).
@@ -73,4 +77,8 @@ Hotfix Branches:
 For urgent production fixes:
 git checkout -b hotfix/<issue>
 
+<<<<<<< HEAD
 Merge hotfixes into both main and dev.
+=======
+Merge hotfixes into both main and dev.
+>>>>>>> af144faa4b25b404699770428b5c18e75f6838c6

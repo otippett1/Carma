@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 Task List – Carma Prototype 1
+=======
+# Task List – Carma
+>>>>>>> af144faa4b25b404699770428b5c18e75f6838c6
 
 Each task is based on the Analyst’s user stories and includes a clear completion definition.
 
@@ -92,4 +96,8 @@ T14. Authentication and Session Management
 
 Story: Enable login and signup to secure user data.
 
+<<<<<<< HEAD
 Done: Supabase authentication works; protected routes limit access for logged-in users only.
+=======
+Done: Supabase authentication works; protected routes limit access for logged-in users only.
+>>>>>>> af144faa4b25b404699770428b5c18e75f6838c6
