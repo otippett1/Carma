@@ -10,8 +10,13 @@ app.use(express.json())
 
 const PORT = process.env.PORT || 3001
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'carma-api' })
+app.get('/v1/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'carma-api',
+    time: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'development'
+  })
 })
 
 // Placeholder routes
