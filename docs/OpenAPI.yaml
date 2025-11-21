@@ -1,0 +1,979 @@
+openapi: 3.0.3
+info:
+  title: Carma API
+  version: "1.0.0"
+  description: |
+    REST API for Carma (mobile-first marketplace & community).
+    The client must never access the database directly—this API is the single integration point.
+
+servers:
+  - url: https://api.carma.example.com/v1
+    description: Production
+  - url: http://localhost:3000/v1
+    description: Local dev
+
+tags:
+  - name: Health
+  - name: Users
+  - name: Content
+  - name: Listings
+  - name: CommunityPosts
+  - name: QAPosts
+  - name: Events
+  - name: SavedItems
+  - name: Notifications
+  - name: Admin
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: getHealth
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  # --------------------
+  # Users
+  # --------------------
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      operationId: listUsers
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+        - in: query
+          name: role
+          schema: { type: string, enum: [user, vendor, admin] }
+      responses:
+        "200":
+          description: A page of users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedUsers"
+    post:
+      tags: [Users]
+      summary: Create user
+      operationId: createUser
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+
+  /users/{userId}:
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      operationId: getUser
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/userId"
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Users]
+      summary: Update user
+      operationId: updateUser
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/userId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+    delete:
+      tags: [Users]
+      summary: Delete user
+      operationId: deleteUser
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/userId"
+      responses:
+        "204":
+          description: Deleted
+
+  # --------------------
+  # Content (super-type; optional admin/debug)
+  # --------------------
+  /content:
+    get:
+      tags: [Content]
+      summary: List content
+      operationId: listContent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+        - in: query
+          name: content_type
+          schema:
+            type: string
+            enum: [listing, post, qa, event]
+      responses:
+        "200":
+          description: Page of content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedContent"
+
+  /content/{contentId}:
+    get:
+      tags: [Content]
+      summary: Get content by ID
+      operationId: getContent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/contentId"
+      responses:
+        "200":
+          description: Content
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Content" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Content]
+      summary: Delete content
+      operationId: deleteContent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/contentId"
+      responses:
+        "204":
+          description: Deleted
+
+  # --------------------
+  # Listings (PartListing)
+  # --------------------
+  /listings:
+    get:
+      tags: [Listings]
+      summary: List listings (filters include condition, price, radius, make/model/year)
+      operationId: listListings
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+        - in: query
+          name: condition
+          schema: { type: string, example: Used }
+        - in: query
+          name: max_price
+          schema: { type: number, format: float }
+        - in: query
+          name: location
+          schema: { type: string, example: "Los Angeles, CA" }
+        - in: query
+          name: radius_miles
+          schema: { type: integer, minimum: 1, example: 25 }
+        - in: query
+          name: used_new
+          description: Toggle between "Used" vs "New" (mirrors condition or UI toggle)
+          schema: { type: string, enum: [Used, New] }
+        - in: query
+          name: make
+          schema: { type: string }
+        - in: query
+          name: model
+          schema: { type: string }
+        - in: query
+          name: year
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Page of listings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaginatedListings" }
+    post:
+      tags: [Listings]
+      summary: Create listing
+      operationId: createListing
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ListingCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Listing" }
+
+  /listings/{listingId}:
+    get:
+      tags: [Listings]
+      summary: Get listing
+      operationId: getListing
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/listingId"
+      responses:
+        "200":
+          description: Listing
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Listing" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Listings]
+      summary: Update listing
+      operationId: updateListing
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/listingId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ListingUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Listing" }
+    delete:
+      tags: [Listings]
+      summary: Delete listing
+      operationId: deleteListing
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/listingId"
+      responses:
+        "204": { description: Deleted }
+
+  # --------------------
+  # Community Posts
+  # --------------------
+  /posts:
+    get:
+      tags: [CommunityPosts]
+      summary: List community posts
+      operationId: listCommunityPosts
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+        - in: query
+          name: hashtag
+          schema: { type: string, example: JDM }
+      responses:
+        "200":
+          description: Page of posts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaginatedCommunityPosts" }
+    post:
+      tags: [CommunityPosts]
+      summary: Create community post
+      operationId: createCommunityPost
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommunityPostCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommunityPost" }
+
+  /posts/{postId}:
+    get:
+      tags: [CommunityPosts]
+      summary: Get community post
+      operationId: getCommunityPost
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/postId"
+      responses:
+        "200":
+          description: Post
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommunityPost" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [CommunityPosts]
+      summary: Update community post
+      operationId: updateCommunityPost
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/postId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommunityPostUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommunityPost" }
+    delete:
+      tags: [CommunityPosts]
+      summary: Delete community post
+      operationId: deleteCommunityPost
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/postId"
+      responses:
+        "204": { description: Deleted }
+
+  # --------------------
+  # Q&A Posts
+  # --------------------
+  /qa:
+    get:
+      tags: [QAPosts]
+      summary: List Q&A posts
+      operationId: listQAPosts
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+        - in: query
+          name: q
+          schema: { type: string, description: Search in question_text }
+      responses:
+        "200":
+          description: Page of Q&A posts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaginatedQAPosts" }
+    post:
+      tags: [QAPosts]
+      summary: Create Q&A post
+      operationId: createQAPost
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QAPostCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QAPost" }
+
+  /qa/{qaId}:
+    get:
+      tags: [QAPosts]
+      summary: Get Q&A post
+      operationId: getQAPost
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/qaId"
+      responses:
+        "200":
+          description: Q&A post
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QAPost" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [QAPosts]
+      summary: Update Q&A post
+      operationId: updateQAPost
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/qaId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QAPostUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QAPost" }
+    delete:
+      tags: [QAPosts]
+      summary: Delete Q&A post
+      operationId: deleteQAPost
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/qaId"
+      responses:
+        "204": { description: Deleted }
+
+  # --------------------
+  # Events
+  # --------------------
+  /events:
+    get:
+      tags: [Events]
+      summary: List events (supports radius and date windows)
+      operationId: listEvents
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+        - in: query
+          name: location
+          schema: { type: string, example: "Los Angeles, CA" }
+        - in: query
+          name: radius_miles
+          schema: { type: integer, minimum: 1, example: 25 }
+        - in: query
+          name: start_date
+          schema: { type: string, format: date }
+        - in: query
+          name: end_date
+          schema: { type: string, format: date }
+        - in: query
+          name: include_past
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Page of events
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaginatedEvents" }
+    post:
+      tags: [Events]
+      summary: Create event
+      operationId: createEvent
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EventCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+
+  /events/{eventId}:
+    get:
+      tags: [Events]
+      summary: Get event
+      operationId: getEvent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/eventId"
+      responses:
+        "200":
+          description: Event
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Events]
+      summary: Update event
+      operationId: updateEvent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/eventId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EventUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+    delete:
+      tags: [Events]
+      summary: Delete event
+      operationId: deleteEvent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/eventId"
+      responses:
+        "204": { description: Deleted }
+
+  # --------------------
+  # Saved Items
+  # --------------------
+  /saved:
+    get:
+      tags: [SavedItems]
+      summary: List saved items for current user
+      operationId: listSavedItems
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          description: Page of saved items
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaginatedSavedItems" }
+    post:
+      tags: [SavedItems]
+      summary: Save a piece of content
+      operationId: createSavedItem
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SavedItemCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SavedItem" }
+
+  /saved/{savedItemId}:
+    delete:
+      tags: [SavedItems]
+      summary: Remove a saved item
+      operationId: deleteSavedItem
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/savedItemId"
+      responses:
+        "204": { description: Deleted }
+
+  # --------------------
+  # Notifications
+  # --------------------
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications for current user
+      operationId: listNotifications
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+        - in: query
+          name: unread_only
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Page of notifications
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaginatedNotifications" }
+
+  /notifications/{notificationId}:
+    patch:
+      tags: [Notifications]
+      summary: Mark notification read/unread
+      operationId: updateNotification
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/notificationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_read: { type: boolean }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Notification" }
+    delete:
+      tags: [Notifications]
+      summary: Delete notification
+      operationId: deleteNotification
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/notificationId"
+      responses:
+        "204": { description: Deleted }
+
+  # --------------------
+  # Moderation / Admin (minimal, per spec's safety and strikes)
+  # --------------------
+  /admin/reports:
+    post:
+      tags: [Admin]
+      summary: Report a content item
+      operationId: createReport
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content_id, reason]
+              properties:
+                content_id: { $ref: "#/components/schemas/UUID" }
+                reason: { type: string }
+      responses:
+        "202":
+          description: Report accepted
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    offset:
+      name: offset
+      in: query
+      schema: { type: integer, minimum: 0, default: 0 }
+
+    userId:
+      name: userId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/UUID" }
+    contentId:
+      name: contentId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/UUID" }
+    listingId:
+      name: listingId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/UUID" }
+    postId:
+      name: postId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/UUID" }
+    qaId:
+      name: qaId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/UUID" }
+    eventId:
+      name: eventId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/UUID" }
+    savedItemId:
+      name: savedItemId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/UUID" }
+    notificationId:
+      name: notificationId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/UUID" }
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+      example: "11111111-1111-4111-a111-111111111111"
+
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        details: { type: string }
+
+    # ---------- Users ----------
+    User:
+      type: object
+      properties:
+        user_id: { $ref: "#/components/schemas/UUID" }
+        username: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, enum: [user, vendor, admin], default: user }
+        created_at: { type: string, format: date-time }
+    UserCreate:
+      type: object
+      required: [username, email, password, role]
+      properties:
+        username: { type: string }
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+        role: { type: string, enum: [user, vendor, admin], default: user }
+    UserUpdate:
+      type: object
+      properties:
+        username: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, enum: [user, vendor, admin] }
+
+    PaginatedUsers:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/User" }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    # ---------- Content super-type ----------
+    Content:
+      type: object
+      properties:
+        content_id: { $ref: "#/components/schemas/UUID" }
+        content_type: { type: string, enum: [listing, post, qa, event] }
+        created_at: { type: string, format: date-time }
+
+    PaginatedContent:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Content" }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    # ---------- Listings ----------
+    Listing:
+      type: object
+      properties:
+        listing_id: { $ref: "#/components/schemas/UUID" }
+        content_id: { $ref: "#/components/schemas/UUID" }
+        user_id: { $ref: "#/components/schemas/UUID" }
+        title: { type: string }
+        description: { type: string }
+        condition: { type: string }
+        price: { type: number, format: float }
+        location: { type: string }
+        created_at:
+          description: Derived from content
+          type: string
+          format: date-time
+          nullable: true
+    ListingCreate:
+      type: object
+      required: [title, description, condition, price, location]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        condition: { type: string, enum: [Used, New] }
+        price: { type: number, format: float }
+        location: { type: string }
+    ListingUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+        condition: { type: string, enum: [Used, New] }
+        price: { type: number, format: float }
+        location: { type: string }
+
+    PaginatedListings:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Listing" }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    # ---------- Community Posts ----------
+    CommunityPost:
+      type: object
+      properties:
+        post_id: { $ref: "#/components/schemas/UUID" }
+        content_id: { $ref: "#/components/schemas/UUID" }
+        user_id: { $ref: "#/components/schemas/UUID" }
+        text_content: { type: string }
+        media_url: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+    CommunityPostCreate:
+      type: object
+      required: [text_content]
+      properties:
+        text_content: { type: string }
+        media_url: { type: string, nullable: true }
+    CommunityPostUpdate:
+      type: object
+      properties:
+        text_content: { type: string }
+        media_url: { type: string, nullable: true }
+
+    PaginatedCommunityPosts:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CommunityPost" }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    # ---------- Q&A ----------
+    QAPost:
+      type: object
+      properties:
+        qa_id: { $ref: "#/components/schemas/UUID" }
+        content_id: { $ref: "#/components/schemas/UUID" }
+        user_id: { $ref: "#/components/schemas/UUID" }
+        question_text: { type: string }
+        media_url: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+    QAPostCreate:
+      type: object
+      required: [question_text]
+      properties:
+        question_text: { type: string }
+        media_url: { type: string, nullable: true }
+    QAPostUpdate:
+      type: object
+      properties:
+        question_text: { type: string }
+        media_url: { type: string, nullable: true }
+
+    PaginatedQAPosts:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/QAPost" }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    # ---------- Events ----------
+    Event:
+      type: object
+      properties:
+        event_id: { $ref: "#/components/schemas/UUID" }
+        content_id: { $ref: "#/components/schemas/UUID" }
+        user_id: { $ref: "#/components/schemas/UUID" }
+        title: { type: string }
+        description: { type: string }
+        event_date: { type: string, format: date }
+        location: { type: string }
+        created_at: { type: string, format: date-time }
+    EventCreate:
+      type: object
+      required: [title, description, event_date, location]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        event_date: { type: string, format: date }
+        location: { type: string }
+    EventUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+        event_date: { type: string, format: date }
+        location: { type: string }
+
+    PaginatedEvents:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Event" }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    # ---------- Saved Items ----------
+    SavedItem:
+      type: object
+      properties:
+        saved_item_id: { $ref: "#/components/schemas/UUID" }
+        user_id: { $ref: "#/components/schemas/UUID" }
+        content_id: { $ref: "#/components/schemas/UUID" }
+        saved_at: { type: string, format: date-time }
+    SavedItemCreate:
+      type: object
+      required: [content_id]
+      properties:
+        content_id: { $ref: "#/components/schemas/UUID" }
+
+    PaginatedSavedItems:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SavedItem" }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    # ---------- Notifications ----------
+    Notification:
+      type: object
+      properties:
+        notification_id: { $ref: "#/components/schemas/UUID" }
+        saved_item_id: { $ref: "#/components/schemas/UUID" }
+        message: { type: string }
+        is_read: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    PaginatedNotifications:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Notification" }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
